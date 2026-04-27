@@ -1,0 +1,24 @@
+{
+  "asset_id": "ground_pond_meadow",
+  "version": 1,
+  "status": "validated",
+  "tri_count": 1152,
+  "tri_budget": 1200,
+  "bounding_box": {
+    "min": [
+      -15,
+      -15,
+      -0.08163916319608688
+    ],
+    "max": [
+      15,
+      15,
+      0.08106321841478348
+    ]
+  },
+  "material_slots": [
+    "ground_unlit_vc"
+  ],
+  "blender_version": "4.0.2.",
+  "generated_at": "2026-04-27T21:50:01.353Z"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "asset-foundry",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "AI-driven Blender asset pipeline. World manifest → LangGraph orchestrator → Blender MCP → validated .glb. Reusable across game projects.",
+  "scripts": {
+    "gen-asset": "tsx scripts/gen-asset.ts",
+    "validate": "tsx scripts/validate.ts",
+    "validate:manifest": "tsx scripts/validate-manifest.ts",
+    "install-blender": "bash scripts/install-blender-mcp.sh",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@langchain/anthropic": "^0.3.11",
+    "@langchain/core": "^0.3.27",
+    "@langchain/langgraph": "^0.2.31",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

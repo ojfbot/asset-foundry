@@ -1,0 +1,64 @@
+# Cozy Beaver world manifest — single source of truth for what exists in the world.
+# Schema: manifest/schema.ts (Zod). The LangGraph sub-agents read this; only the
+# WorldDesigner agent ever writes to it.
+
+version: 1
+biomes:
+  - id: pond_meadow
+    palette: [forest_green, dawn_gold, slate_blue, bark_white]
+    fog: { color: "#d8e4d2", density: 0.012 }
+    ambient_props: [cattail, lily_pad, dragonfly_swarm]
+
+palettes:
+  forest_green: { hex: "#3a5f3a", role: foliage }
+  dawn_gold: { hex: "#e8c170", role: highlight }
+  slate_blue: { hex: "#5a7a92", role: shadow }
+  bark_white: { hex: "#e9e6df", role: neutral }
+
+props:
+  - id: birch_sapling
+    category: vegetation
+    tri_budget: 600
+    variants: 4
+    biomes: [pond_meadow]
+    style_anchors: [firewatch_silhouette, flat_shaded, painterly_bark]
+    materials: [bark_white, leaf_green]
+    interaction: none
+
+  - id: ground_pond_meadow
+    category: terrain
+    tri_budget: 1200
+    variants: 1
+    biomes: [pond_meadow]
+    style_anchors: [low_poly_meadow, flat_shaded, gentle_undulation]
+    materials: [grass_green]
+    interaction: none
+
+  - id: water_pond
+    category: water
+    tri_budget: 200
+    variants: 1
+    biomes: [pond_meadow]
+    style_anchors: [translucent, painterly_water, slate_blue]
+    materials: [pond_water]
+    interaction: none
+
+  - id: sky_dome
+    category: sky
+    tri_budget: 400
+    variants: 1
+    biomes: [pond_meadow]
+    style_anchors: [gradient_dawn_to_meadow, unlit]
+    materials: [sky_gradient]
+    interaction: none
+
+  - id: beaver_basic
+    category: character
+    tri_budget: 400
+    variants: 1
+    biomes: [pond_meadow]
+    style_anchors: [low_poly_quadruped, rounded_silhouette]
+    materials: [beaver_fur, beaver_belly]
+    interaction: none
+
+characters: []

@@ -1,0 +1,30 @@
+node_modules/
+tsconfig.tsbuildinfo
+.DS_Store
+*.log
+.env
+.env.local
+
+# Per-developer / managed Claude Code state
+.claude/settings.json
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
+# Symlinks installed by core/scripts/install-agents.sh — repo-local only
+.claude/commands
+.claude/skills/*
+domain-knowledge/
+scripts/hooks/
+personal-knowledge/
+decisions/core
+
+# Core symlinks ignored above; allow our local skills (real dirs)
+!.claude/skills/add-prop/
+!.claude/skills/audit-budgets/
+
+# Build artefacts: keep dist/scripts (gitignored) but commit the validated
+# .glb + .validation.json so consumers can fetch them as a tagged release.
+dist/scripts/
+
+# Reference-only Hyper3D outputs (ADR-0003)
+**/_reference_/**
