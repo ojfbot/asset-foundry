@@ -1,0 +1,39 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  schema-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: typecheck
+        run: pnpm typecheck
+
+      - name: test
+        run: pnpm test
+
+      - name: validate manifest schema
+        run: pnpm validate:manifest
+
+      - name: gate committed validation manifests
+        run: pnpm validate
+
+  # Phase 0 keeps Blender out of CI; the offline fixture path runs locally
+  # via `pnpm gen-asset`. Phase 2 will add a blender-pipeline-smoke job that
+  # installs the pinned Blender LTS and runs gen-asset on a representative
+  # prop, comparing the .glb hash against a committed baseline.
