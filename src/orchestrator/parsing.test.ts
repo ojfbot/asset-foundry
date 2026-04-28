@@ -51,11 +51,11 @@ describe("extractFencedPython", () => {
 });
 
 describe("extractSummaryJson", () => {
-  const valid = `FOUNDRY_SUMMARY {"asset_id":"birch_sapling","tri_count":80,"bounding_box":{"min":[0,0,0],"max":[1,1,1]},"material_slots":[]}`;
+  const valid = `FOUNDRY_SUMMARY {"asset_id":"test_cube","tri_count":80,"bounding_box":{"min":[0,0,0],"max":[1,1,1]},"material_slots":[]}`;
 
   it("parses a single FOUNDRY_SUMMARY line in stdout", () => {
     const result = extractSummaryJson(valid) as Record<string, unknown>;
-    expect(result.asset_id).toBe("birch_sapling");
+    expect(result.asset_id).toBe("test_cube");
     expect(result.tri_count).toBe(80);
     expect(result.material_slots).toEqual([]);
   });
@@ -67,7 +67,7 @@ describe("extractSummaryJson", () => {
       `${valid}\n` +
       `Blender quit\n`;
     const result = extractSummaryJson(stdout) as Record<string, unknown>;
-    expect(result.asset_id).toBe("birch_sapling");
+    expect(result.asset_id).toBe("test_cube");
   });
 
   it("returns the FIRST FOUNDRY_SUMMARY when multiple lines exist", () => {
