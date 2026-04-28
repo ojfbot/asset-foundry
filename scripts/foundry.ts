@@ -1,116 +1,18 @@
 // CLI: pnpm foundry <subcommand> [...args]
 //
-// Phase 2 dispatcher (ADR-0006/0007/0008). Subcommands share one dispatch
-// surface so the Phase 3 MCP server can wrap the same handlers without
-// duplicating logic.
-//
-// Subcommands:
-//   asset:generate <prop_id>    generate an asset (or resume one with --resume)
-//   asset:list                  list generated assets in a target's dist/
-//   target:list                 enumerate sibling repos with asset-foundry/ dirs
-//   target:scaffold <name>      scaffold a new <path>/<name>/asset-foundry/
-//   run:list                    list recent runs from the state DB
-//   run:status <run_id>         show one run's details
-//   run:resume <run_id>         resume a crashed or pending run
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+// Phase 2 / Phase 3 dispatcher. Each subcommand is a thin wrapper around a pure
+// handler in src/handlers.ts. The Phase 3 MCP server (src/mcp/server.ts) wraps
+// the same handlers as MCP tools — single code path, two front doors. (ADR-0009)
 import { Command } from "commander";
-import { HumanMessage } from "@langchain/core/messages";
-import { loadTarget, resolveTargetPath } from "../src/targets/loader";
-import { buildGraph } from "../src/orchestrator/graph";
-import { createStateStore, type RunStatus } from "../src/state/checkpointer";
+import * as h from "../src/handlers";
+import { createStateStore } from "../src/state/checkpointer";
+import { startMcpServer } from "../src/mcp/server";
 
 const program = new Command();
 program
   .name("foundry")
-  .description("Asset-foundry platform CLI (ADR-0006/0007/0008).")
-  .version("0.2.0");
-
-// Core "generate or resume" logic shared by asset:generate and run:resume.
-async function runGenerate(args: {
-  propId?: string;
-  targetPath?: string;
-  resumeRunId?: string;
-}): Promise<void> {
-  const store = createStateStore();
-  try {
-    let runId: string;
-    let target;
-    let propId: string;
-    let isResume = false;
-
-    if (args.resumeRunId) {
-      const existing = store.runs.get(args.resumeRunId);
-      if (!existing) throw new Error(`run ${args.resumeRunId} not found in ${store.dbPath}`);
-      runId = existing.run_id;
-      target = loadTarget(existing.target_path);
-      propId = existing.prop_id;
-      isResume = true;
-      console.log(`▶ resuming run ${runId} (${propId} → ${target.targetRepoPath})`);
-    } else {
-      if (!args.propId) throw new Error("propId required when not resuming");
-      target = loadTarget(args.targetPath);
-      propId = args.propId;
-      runId = randomUUID();
-      store.runs.insertPending({
-        run_id: runId,
-        target_path: target.targetRepoPath,
-        prop_id: propId,
-        started_at: new Date().toISOString(),
-      });
-      console.log(`▶ run ${runId}: generating ${propId} (target: ${target.targetRepoPath})`);
-    }
-
-    const graph = buildGraph({ propId, checkpointer: store.checkpointer });
-    const initial = isResume
-      ? null
-      : {
-          target,
-          manifest: target.manifest,
-          messages: [new HumanMessage(`generate ${propId}`)],
-          currentNode: "start",
-        };
-    const config = { configurable: { thread_id: runId } };
-    const final = await graph.invoke(initial as never, config);
-
-    if (final.validation?.status !== "validated") {
-      const reason = final.validation?.rejectionReason ?? "unknown";
-      store.runs.updateRejected(runId, reason);
-      console.error(`✗ run ${runId}: rejected — ${reason}`);
-      process.exit(1);
-    }
-
-    const glbPath = final.glbPath as string;
-    store.runs.updateValidated(
-      runId,
-      glbPath,
-      final.validation.triCount,
-      final.validation.triBudget,
-    );
-    console.log(
-      `✓ run ${runId}: ${glbPath} validated (${final.validation.triCount}/${final.validation.triBudget} tris)`,
-    );
-
-    if (existsSync(target.targetRepoPath)) {
-      mkdirSync(target.publicAssetsDir, { recursive: true });
-      const json = glbPath.replace(/\.glb$/, ".validation.json");
-      copyFileSync(glbPath, join(target.publicAssetsDir, basename(glbPath)));
-      copyFileSync(json, join(target.publicAssetsDir, basename(json)));
-      console.log(`→ synced to ${target.publicAssetsDir}/`);
-    }
-  } finally {
-    store.close();
-  }
-}
+  .description("Asset-foundry platform CLI (ADR-0006/0007/0008/0009).")
+  .version("0.3.0");
 
 // ─── asset:generate ────────────────────────────────────────────────────────
 
@@ -121,7 +23,29 @@ program
   .option("-t, --target <path>", "consumer game repo path (or set $FOUNDRY_TARGET)")
   .option("--resume <run_id>", "resume a crashed run instead of starting fresh")
   .action(async (propId: string, opts: { target?: string; resume?: string }) => {
-    await runGenerate({ propId, targetPath: opts.target, resumeRunId: opts.resume });
+    const store = createStateStore();
+    try {
+      if (opts.resume) {
+        console.log(`▶ resuming run ${opts.resume}`);
+      } else {
+        console.log(`▶ generating ${propId} (target: ${opts.target ?? "$FOUNDRY_TARGET"})`);
+      }
+      const result = await h.assetGenerate(store, {
+        propId,
+        targetPath: opts.target,
+        resumeRunId: opts.resume,
+      });
+      if (result.status === "rejected") {
+        console.error(`✗ run ${result.runId}: rejected — ${result.rejection}`);
+        process.exit(1);
+      }
+      console.log(
+        `✓ run ${result.runId}: ${result.glbPath} validated (${result.triCount}/${result.triBudget} tris)`,
+      );
+      if (result.syncedTo) console.log(`→ synced to ${result.syncedTo}/`);
+    } finally {
+      store.close();
+    }
   });
 
 // ─── asset:list ────────────────────────────────────────────────────────────
@@ -131,23 +55,15 @@ program
   .description("List generated assets in a target's dist/ directory.")
   .option("-t, --target <path>", "consumer game repo path")
   .action((opts: { target?: string }) => {
-    const target = loadTarget(opts.target);
-    if (!existsSync(target.outputDir)) {
-      console.log(`(no dist/ at ${target.outputDir} — nothing generated yet)`);
+    const result = h.assetList({ targetPath: opts.target });
+    if (result.assets.length === 0) {
+      console.log(`(no assets in ${result.outputDir})`);
       return;
     }
-    const reports = readdirSync(target.outputDir).filter((f) => f.endsWith(".validation.json"));
-    if (reports.length === 0) {
-      console.log("(no .validation.json files)");
-      return;
-    }
-    console.log(`assets in ${target.outputDir}:`);
-    for (const r of reports.sort()) {
-      const data = JSON.parse(readFileSync(join(target.outputDir, r), "utf8"));
-      const status = data.status === "validated" ? "✓" : "✗";
-      console.log(
-        `  ${status}  ${data.asset_id.padEnd(28)}  ${data.tri_count}/${data.tri_budget} tris  ${data.status}`,
-      );
+    console.log(`assets in ${result.outputDir}:`);
+    for (const a of result.assets) {
+      const mark = a.status === "validated" ? "✓" : "✗";
+      console.log(`  ${mark}  ${a.assetId.padEnd(28)}  ${a.triCount}/${a.triBudget} tris  ${a.status}`);
     }
   });
 
@@ -158,32 +74,17 @@ program
   .description("Enumerate sibling repos that look like targets (have an asset-foundry/ dir).")
   .option("--root <path>", "directory to scan for siblings (default: parent of cwd)")
   .action((opts: { root?: string }) => {
-    const root = resolve(opts.root ?? join(process.cwd(), ".."));
-    if (!existsSync(root)) {
-      console.error(`✗ scan root not found: ${root}`);
-      process.exit(1);
-    }
-    const found: string[] = [];
-    for (const e of readdirSync(root)) {
-      const p = join(root, e);
-      try {
-        if (!statSync(p).isDirectory()) continue;
-      } catch {
-        continue;
-      }
-      if (existsSync(join(p, "asset-foundry", "world.yaml"))) found.push(p);
-    }
-    if (found.length === 0) {
-      console.log(`(no targets found under ${root})`);
+    const result = h.targetList({ rootPath: opts.root });
+    if (result.targets.length === 0) {
+      console.log(`(no targets found under ${result.rootPath})`);
       return;
     }
-    console.log(`targets under ${root}:`);
-    for (const p of found.sort()) {
-      try {
-        const t = loadTarget(p);
-        console.log(`  ${p}  (${t.manifest.props.length} props, ${t.manifest.biomes.length} biomes)`);
-      } catch (err) {
-        console.log(`  ${p}  (invalid: ${err instanceof Error ? err.message : err})`);
+    console.log(`targets under ${result.rootPath}:`);
+    for (const t of result.targets) {
+      if (t.valid) {
+        console.log(`  ${t.path}  (${t.propCount} props, ${t.biomeCount} biomes)`);
+      } else {
+        console.log(`  ${t.path}  (invalid: ${t.error})`);
       }
     }
   });
@@ -196,31 +97,38 @@ program
   .argument("<name>", "target name (becomes the directory name when --path is omitted)")
   .option("-p, --path <path>", "absolute or relative directory to scaffold into (default: ../<name>)")
   .action((name: string, opts: { path?: string }) => {
-    const repoRoot = process.cwd();
-    const targetRoot = resolve(opts.path ?? join(repoRoot, "..", name));
-    const dest = join(targetRoot, "asset-foundry");
-    if (existsSync(dest)) {
-      console.error(`✗ refuse to overwrite existing ${dest}`);
+    const result = h.targetScaffold({ name, path: opts.path });
+    console.log(`✓ scaffolded ${result.destPath}`);
+    console.log(`  files: ${result.filesWritten.length}`);
+    console.log(`  next: edit world.yaml then run pnpm foundry asset:generate <prop_id> --target ${result.destPath.replace(/\/asset-foundry$/, "")}`);
+  });
+
+// ─── target:validate ───────────────────────────────────────────────────────
+
+program
+  .command("target:validate")
+  .description("Zod-validate a target's manifest.")
+  .option("-t, --target <path>", "consumer game repo path")
+  .action((opts: { target?: string }) => {
+    const result = h.targetValidate({ targetPath: opts.target });
+    if (!result.valid) {
+      console.error(`✗ ${result.error}`);
       process.exit(1);
     }
-    const templatesDir = join(repoRoot, "templates", "asset-foundry");
-    if (!existsSync(templatesDir)) {
-      console.error(`✗ templates/ missing at ${templatesDir}`);
-      process.exit(1);
-    }
-    mkdirSync(join(dest, "fixtures"), { recursive: true });
-    // Substitute the literal token __TARGET_NAME__ in template files.
-    const subst = (s: string) => s.replaceAll("__TARGET_NAME__", name);
-    for (const f of ["world.yaml", "palettes.yaml"]) {
-      const src = join(templatesDir, f);
-      writeFileSync(join(dest, f), subst(readFileSync(src, "utf8")));
-    }
-    for (const f of readdirSync(join(templatesDir, "fixtures"))) {
-      copyFileSync(join(templatesDir, "fixtures", f), join(dest, "fixtures", f));
-    }
-    console.log(`✓ scaffolded ${dest}`);
-    console.log(`  next: edit ${join(dest, "world.yaml")} and add real props`);
-    console.log(`  then: pnpm foundry asset:generate <prop_id> --target ${targetRoot}`);
+    console.log(
+      `✓ manifest valid: ${result.propCount} props, ${result.biomeCount} biomes (${result.manifestPath})`,
+    );
+  });
+
+// ─── manifest:read ─────────────────────────────────────────────────────────
+
+program
+  .command("manifest:read")
+  .description("Read and print the parsed manifest for a target (JSON).")
+  .option("-t, --target <path>", "consumer game repo path")
+  .action((opts: { target?: string }) => {
+    const result = h.manifestRead({ targetPath: opts.target });
+    console.log(JSON.stringify(result, null, 2));
   });
 
 // ─── run:list ──────────────────────────────────────────────────────────────
@@ -234,10 +142,9 @@ program
   .action((opts: { target?: string; status?: string; limit?: string }) => {
     const store = createStateStore();
     try {
-      const targetPath = opts.target ? resolveTargetPath(opts.target) : undefined;
-      const rows = store.runs.list({
-        target: targetPath,
-        status: opts.status as RunStatus | undefined,
+      const rows = h.runList(store, {
+        targetPath: opts.target,
+        status: opts.status as h.RunListArgs["status"],
         limit: parseInt(opts.limit ?? "20", 10),
       });
       if (rows.length === 0) {
@@ -264,11 +171,7 @@ program
   .action(async (runId: string) => {
     const store = createStateStore();
     try {
-      const row = store.runs.get(runId);
-      if (!row) {
-        console.error(`✗ run ${runId} not found in ${store.dbPath}`);
-        process.exit(1);
-      }
+      const row = await h.runStatus(store, { runId });
       console.log(`run_id:      ${row.run_id}`);
       console.log(`status:      ${row.status}`);
       console.log(`target:      ${row.target_path}`);
@@ -278,14 +181,8 @@ program
       if (row.tri_count != null) console.log(`tris:        ${row.tri_count}/${row.tri_budget}`);
       if (row.glb_path) console.log(`glb_path:    ${row.glb_path}`);
       if (row.rejection) console.log(`rejection:   ${row.rejection}`);
-      const tuple = await store.checkpointer.getTuple({ configurable: { thread_id: runId } });
-      if (tuple) {
-        const cv = tuple.checkpoint.channel_values as Record<string, unknown>;
-        console.log(`last_node:   ${(cv["currentNode"] as string) ?? "?"}`);
-        console.log(`last_ts:     ${tuple.config.configurable?.["thread_ts"] ?? "?"}`);
-      } else {
-        console.log("(no checkpoint yet)");
-      }
+      if (row.lastNode) console.log(`last_node:   ${row.lastNode}`);
+      if (row.lastTimestamp) console.log(`last_ts:     ${row.lastTimestamp}`);
     } finally {
       store.close();
     }
@@ -298,7 +195,30 @@ program
   .description("Re-invoke the graph for a run from its latest checkpoint.")
   .argument("<run_id>")
   .action(async (runId: string) => {
-    await runGenerate({ resumeRunId: runId });
+    const store = createStateStore();
+    try {
+      console.log(`▶ resuming run ${runId}`);
+      const result = await h.assetGenerate(store, { resumeRunId: runId });
+      if (result.status === "rejected") {
+        console.error(`✗ run ${result.runId}: rejected — ${result.rejection}`);
+        process.exit(1);
+      }
+      console.log(
+        `✓ run ${result.runId}: ${result.glbPath} validated (${result.triCount}/${result.triBudget} tris)`,
+      );
+      if (result.syncedTo) console.log(`→ synced to ${result.syncedTo}/`);
+    } finally {
+      store.close();
+    }
+  });
+
+// ─── mcp ───────────────────────────────────────────────────────────────────
+
+program
+  .command("mcp")
+  .description("Start the asset-foundry MCP server over stdio (ADR-0009). Long-running.")
+  .action(async () => {
+    await startMcpServer();
   });
 
 await program.parseAsync(process.argv);
