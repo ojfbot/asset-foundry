@@ -22,9 +22,10 @@ decisions/core
 !.claude/skills/add-prop/
 !.claude/skills/audit-budgets/
 
-# Build artefacts: keep dist/scripts (gitignored) but commit the validated
-# .glb + .validation.json so consumers can fetch them as a tagged release.
-dist/scripts/
+# Build artefacts (ADR-0006): asset-foundry owns no game data. Generated assets
+# live in <target>/asset-foundry/dist/ in the consumer game's repo. Any dist/ in
+# this repo is stale scratch space.
+dist/
 
 # Reference-only Hyper3D outputs (ADR-0003)
 **/_reference_/**

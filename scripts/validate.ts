@@ -1,13 +1,22 @@
-// Aggregate validator: schema + every committed .validation.json under dist/.
+// Aggregate validator: schema + every committed .validation.json under the target's
+// dist/. Walks the target-rooted output dir per ADR-0006.
+//
+// Usage: pnpm validate [--target <path>]
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { loadManifest } from "../manifest/load";
+import { loadTarget } from "../src/targets/loader";
+
+const argv = process.argv.slice(2);
+let targetPath: string | undefined;
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === "--target") targetPath = argv[++i];
+}
 
 let failed = 0;
-
+let target;
 try {
-  const m = loadManifest();
-  console.log(`✓ manifest schema ok (${m.props.length} props)`);
+  target = loadTarget(targetPath);
+  console.log(`✓ manifest schema ok (${target.manifest.props.length} props)`);
 } catch (err) {
   console.error("✗ manifest invalid:", err instanceof Error ? err.message : err);
   process.exit(1);
@@ -24,7 +33,7 @@ function walk(dir: string): string[] {
   return out;
 }
 
-const reports = walk(join(process.cwd(), "dist"));
+const reports = walk(target.outputDir);
 if (reports.length === 0) {
   console.warn("(no .validation.json files yet — run pnpm gen-asset)");
   process.exit(0);

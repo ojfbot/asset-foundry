@@ -1,11 +1,11 @@
-// Blender bridge. Two execution paths:
-//  1. Subprocess: spawn `blender --background --python <script> -- <out>`.
-//     Reliable, no daemon required, slow startup (~1.5s).
-//  2. MCP/TCP 9876: blender-mcp addon listens; we send {script, args} and stream
-//     back stdout. Faster for repeated runs.
+// Blender subprocess runner. Spawns `blender --background --python <script> -- <out>`,
+// gates the runtime version against `.blender-version` (ADR-0002), and returns the
+// captured stdout for downstream parsers (FOUNDRY_SUMMARY line, etc.).
 //
-// Phase 0 ships path #1 because it works as long as `blender` is on PATH.
-// Path #2 lives behind FOUNDRY_USE_MCP=1 and falls back to subprocess on connect failure.
+// Note on naming: this file used to be `mcp-bridge.ts` but is *not* an MCP bridge —
+// the real MCP service surface lives at the orchestrator layer (ADR-0009). A future
+// blender-daemon mode that talks to a long-lived Blender process is still possible,
+// but it would be a separate transport, not an MCP server.
 import { spawn } from "node:child_process";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,6 +15,9 @@ export interface RunOptions {
   scriptPath: string;
   outPath: string;
   materials: MaterialPlan[];
+  /** Directory to write the per-run _materials.json temp file. Per ADR-0006 this
+   *  is target-rooted: <target>/asset-foundry/dist/scripts/. */
+  scriptsDir: string;
 }
 
 export interface RunResult {
@@ -26,7 +29,7 @@ const BLENDER_BIN = process.env.BLENDER_BIN ?? "blender";
 
 export async function runBlenderScript(opts: RunOptions): Promise<RunResult> {
   const expected = readPin();
-  const matsTmp = join(process.cwd(), "dist", "scripts", "_materials.json");
+  const matsTmp = join(opts.scriptsDir, "_materials.json");
   writeFileSync(matsTmp, JSON.stringify(opts.materials), "utf8");
 
   const args = [
