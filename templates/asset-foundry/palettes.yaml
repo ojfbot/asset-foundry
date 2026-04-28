@@ -1,0 +1,5 @@
+# __TARGET_NAME__ slot-palette hints (see ADR-0007).
+# Maps a prop's material slot name to the hex colour MaterialArtist will assign.
+# Slots not listed fall back to #888888.
+
+debug_grey: "#888888"
