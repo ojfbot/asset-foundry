@@ -1,11 +1,12 @@
 // AssetSculptor — reads one prop entry, produces a Blender Python script.
-// Tool surface: Anthropic API + write to dist/scripts/.
+// Tool surface: Anthropic API + write to <target>/asset-foundry/dist/scripts/.
 // Forbidden: writing to manifest, picking final material colours, scene assembly.
 // See decisions/adr/0004-narrow-subagent-boundaries.md.
 //
-// Offline fallback: when ANTHROPIC_API_KEY is unset and `fixtures/<prop_id>.py`
-// exists, the script is sourced from disk. This lets CI exercise the full pipeline
-// without an API key. The runtime contract on the bpy script is identical either way.
+// Offline fallback: when ANTHROPIC_API_KEY is unset and `<target>/asset-foundry/
+// fixtures/<prop_id>.py` exists, the script is sourced from disk. This lets CI
+// exercise the full pipeline without an API key. The runtime contract on the bpy
+// script is identical either way.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { AIMessage } from "@langchain/core/messages";
@@ -53,12 +54,13 @@ JSON summary to stdout, glTF export to OUT_PATH from sys.argv.`;
 export async function assetSculptorNode(state: FoundryStateType): Promise<FoundryUpdate> {
   const prop = state.targetProp;
   if (!prop) throw new Error("AssetSculptor: state.targetProp is null");
+  if (!state.target) throw new Error("AssetSculptor: state.target is null");
 
-  const outDir = join(process.cwd(), "dist", "scripts");
+  const outDir = state.target.scriptsDir;
   mkdirSync(outDir, { recursive: true });
 
   let modelId = "claude-sonnet-4-6";
-  const fixturePath = join(process.cwd(), "fixtures", `${prop.id}.py`);
+  const fixturePath = join(state.target.fixturesDir, `${prop.id}.py`);
   const offline = !process.env.ANTHROPIC_API_KEY;
 
   // Where Blender will actually run the script from. In offline mode we keep

@@ -4,6 +4,7 @@
 import { Annotation } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
 import type { Prop, WorldManifest } from "../../manifest/schema";
+import type { TargetContext } from "../targets/loader";
 
 function messagesReducer(
   state: BaseMessage[] | undefined,
@@ -38,6 +39,7 @@ export interface ValidationOutcome {
 
 export const FoundryState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({ reducer: messagesReducer }),
+  target: Annotation<TargetContext | null>(),
   manifest: Annotation<WorldManifest | null>(),
   targetProp: Annotation<Prop | null>(),
   sculpt: Annotation<SculptResult | null>(),

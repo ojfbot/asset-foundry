@@ -1,10 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { WorldManifestSchema } from "./schema";
-import { loadManifest } from "./load";
+import { loadTarget } from "../src/targets/loader";
 
 describe("WorldManifestSchema", () => {
-  it("parses the committed world.yaml", () => {
-    const m = loadManifest();
+  it("parses the committed beaverGame world.yaml (Phase 0 integration check)", () => {
+    // Target is resolved relative to process.cwd() (the asset-foundry repo root
+    // when vitest runs). beaverGame is the canonical sibling; once a second target
+    // ships in Phase 1, this test should iterate over all known targets.
+    const target = loadTarget("../beaverGame");
+    const m = target.manifest;
     expect(m.version).toBe(1);
     expect(m.props.find((p) => p.id === "birch_sapling")?.tri_budget).toBe(600);
   });
