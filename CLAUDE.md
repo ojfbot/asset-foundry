@@ -97,17 +97,19 @@ pnpm foundry run:list [--target ...] [--status ...] [-l 20]   # recent runs from
 pnpm foundry run:status <run_id>                              # detail incl. last node from checkpoint
 pnpm foundry run:resume <run_id>                              # re-invoke from latest checkpoint
 
-# Phase 3 MCP server:
-pnpm foundry mcp                                              # stdio MCP server; long-running
-claude mcp add foundry pnpm foundry mcp                       # register with Claude Desktop / Code
-pnpm test:mcp                                                 # spawn server + smoke-test the tool registry
+# Phase 3/4 MCP server (two transports, one tool registry):
+pnpm foundry mcp                                              # stdio (Claude Desktop / Code / Blender)
+pnpm foundry mcp-http [-p 3036]                               # HTTP+SSE on 127.0.0.1 (browser app)
+claude mcp add foundry pnpm foundry mcp                       # register stdio with Claude clients
+pnpm test:mcp                                                 # smoke-test stdio
+pnpm test:mcp-http                                            # smoke-test HTTP+SSE
 
 BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm foundry asset:generate beaver_basic --target ../beaverGame
 ```
 
-`pnpm gen-asset` remains as a thin alias to `pnpm foundry asset:generate` (will be removed in Phase 4). `--target` is mandatory; set `$FOUNDRY_TARGET` to skip the flag.
+`pnpm gen-asset` remains as a thin alias to `pnpm foundry asset:generate` (will be removed in Phase 5). `--target` is mandatory; set `$FOUNDRY_TARGET` to skip the flag.
 
-The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts`): one code path, two front doors. Phase 4 will add an HTTP+SSE transport for the Frame MF browser app, sharing the same handlers.
+The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts`): one code path, three front doors (CLI, stdio MCP, HTTP+SSE MCP).
 
 ## Environment
 
@@ -115,6 +117,7 @@ The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts
 - `BLENDER_BIN` — override path. Default `blender`. macOS install: `/Applications/Blender.app/Contents/MacOS/Blender`.
 - `FOUNDRY_TARGET` — path to the consumer target repo (containing `asset-foundry/world.yaml`). Mandatory after Phase 1; equivalent to `--target`.
 - `FOUNDRY_STATE_DIR` — path for the SQLite run-history DB (ADR-0008). Default: `~/.asset-foundry/state/`.
+- `FOUNDRY_HTTP_PORT` — TCP port for `foundry mcp-http` (ADR-0010). Default: 3036.
 
 ## Blender gotchas (learned the hard way)
 
@@ -136,6 +139,7 @@ The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts
 | [0007](decisions/adr/0007-game-agnostic-contract.md) | Game-agnostic contract — `src/` carries no game tokens |
 | [0008](decisions/adr/0008-persistent-state-store.md) | Persistent state store — SQLite default, Postgres opt-in |
 | [0009](decisions/adr/0009-mcp-transport-stance.md) | MCP transport — stdio first, HTTP+SSE second, shared registry |
+| [0010](decisions/adr/0010-ui-host-integration.md) | UI host integration — Frame MF + HTTP+SSE; ports 3035/3036 |
 
 Cross-cutting decisions (asset format, repo split, TS-everywhere) live in `../beaverGame/decisions/adr/`.
 
