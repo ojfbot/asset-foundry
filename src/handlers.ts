@@ -47,9 +47,29 @@ export interface AssetGenerateResult {
   resumed: boolean;
 }
 
+export interface ProgressEvent {
+  node: string;
+  progress: number; // 1..total as nodes complete
+  total: number;
+  runId: string;
+  message?: string;
+}
+
+export interface AssetGenerateOptions {
+  /** Called once per LangGraph node transition. Optional — when absent, the
+   *  graph runs to completion silently (matches Phase 3 behaviour). When
+   *  present, the MCP server uses it to emit notifications/progress. */
+  onProgress?: (event: ProgressEvent) => void | Promise<void>;
+}
+
+// Total nodes in the asset-foundry graph (ADR-0004 + graph.ts):
+// world_designer → asset_sculptor → material_artist → scene_assembler → validator
+const TOTAL_NODES = 5;
+
 export async function assetGenerate(
   store: StateStore,
   args: AssetGenerateArgs,
+  options: AssetGenerateOptions = {},
 ): Promise<AssetGenerateResult> {
   let runId: string;
   let target;
@@ -86,7 +106,34 @@ export async function assetGenerate(
         currentNode: "start",
       };
   const config = { configurable: { thread_id: runId } };
-  const final = await graph.invoke(initial as never, config);
+
+  // Stream node updates so callers can observe progress (ADR-0009 §Async).
+  // The default mode yields { [nodeName]: stateUpdate } per node; we accumulate
+  // node count and forward to onProgress. The final state is read from the
+  // checkpointer once the stream drains.
+  let nodeIndex = 0;
+  const stream = await graph.stream(initial as never, config);
+  for await (const chunk of stream) {
+    for (const [node] of Object.entries(chunk as Record<string, unknown>)) {
+      nodeIndex++;
+      if (options.onProgress) {
+        await options.onProgress({
+          node,
+          progress: nodeIndex,
+          total: TOTAL_NODES,
+          runId,
+          message: `${node} complete (${nodeIndex}/${TOTAL_NODES})`,
+        });
+      }
+    }
+  }
+
+  const tuple = await store.checkpointer.getTuple(config);
+  const channelValues = (tuple?.checkpoint?.channel_values ?? {}) as {
+    glbPath?: string;
+    validation?: { status: "validated" | "rejected" | "pending"; triCount: number; triBudget: number; rejectionReason?: string };
+  };
+  const final = channelValues;
 
   if (final.validation?.status !== "validated") {
     const reason = final.validation?.rejectionReason ?? "unknown";
