@@ -1,28 +1,46 @@
-// CLI: pnpm gen-asset <prop_id>
-// Loads the world manifest, builds the LangGraph, runs it, copies the validated
-// .glb (and its sibling .validation.json) into beaverGame/public/assets/.
+// CLI: pnpm gen-asset <prop_id> [--target <path>]
+//
+// Resolves a target (ADR-0006: external sibling repo with an asset-foundry/ dir),
+// loads its manifest + palettes + fixtures, runs the LangGraph, writes outputs
+// into <target>/asset-foundry/dist/, then syncs the .glb + .validation.json into
+// <target>/public/assets/ for the consumer game to load.
+//
+// Phase 0: when no --target / $FOUNDRY_TARGET is provided, falls back to ../beaverGame.
+// Phase 1 drops the fallback once a second target proves the abstraction.
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, join } from "node:path";
 import { HumanMessage } from "@langchain/core/messages";
-import { loadManifest } from "../manifest/load";
+import { loadTarget } from "../src/targets/loader";
 import { buildGraph } from "../src/orchestrator/graph";
 
-const propId = process.argv[2];
+const argv = process.argv.slice(2);
+let propId: string | undefined;
+let targetPath: string | undefined;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i]!;
+  if (a === "--target") {
+    targetPath = argv[++i];
+  } else if (!a.startsWith("-") && !propId) {
+    propId = a;
+  }
+}
+
 if (!propId) {
-  console.error("usage: pnpm gen-asset <prop_id>   (e.g. birch_sapling)");
+  console.error("usage: pnpm gen-asset <prop_id> [--target <path>]   (e.g. birch_sapling)");
   process.exit(2);
 }
 
-const manifest = loadManifest();
+const target = loadTarget(targetPath);
 const graph = buildGraph({ propId });
 
 const initial = {
-  manifest,
+  target,
+  manifest: target.manifest,
   messages: [new HumanMessage(`generate ${propId}`)],
   currentNode: "start",
 };
 
-console.log(`▶ generating ${propId} via foundry pipeline …`);
+console.log(`▶ generating ${propId} via foundry pipeline (target: ${target.targetRepoPath}) …`);
 const final = await graph.invoke(initial);
 
 if (final.validation?.status !== "validated") {
@@ -32,13 +50,12 @@ if (final.validation?.status !== "validated") {
 
 console.log(`✓ ${final.glbPath} validated (${final.validation.triCount}/${final.validation.triBudget} tris)`);
 
-// Sync into the game client's public assets dir (per ADR-0007).
-const targetDir = resolve(process.cwd(), "..", "beaverGame", "public", "assets");
-if (existsSync(dirname(targetDir))) {
-  mkdirSync(targetDir, { recursive: true });
+// Sync into the consumer game's public assets dir.
+if (existsSync(target.targetRepoPath)) {
+  mkdirSync(target.publicAssetsDir, { recursive: true });
   const glb = final.glbPath!;
   const json = glb.replace(/\.glb$/, ".validation.json");
-  copyFileSync(glb, join(targetDir, glb.split("/").pop()!));
-  copyFileSync(json, join(targetDir, json.split("/").pop()!));
-  console.log(`→ synced to ${targetDir}/`);
+  copyFileSync(glb, join(target.publicAssetsDir, basename(glb)));
+  copyFileSync(json, join(target.publicAssetsDir, basename(json)));
+  console.log(`→ synced to ${target.publicAssetsDir}/`);
 }

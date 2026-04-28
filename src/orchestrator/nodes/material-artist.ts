@@ -1,23 +1,18 @@
 // MaterialArtist — applies the biome palette to sculpted asset's material slots.
-// For Phase 0 we deterministically map prop.materials → palette colours from the
-// manifest. The LLM-driven texture-pull-from-Poly-Haven path is Phase 2+.
+// For Phase 0 we deterministically map prop.materials → slot-palette hints loaded
+// from the target's `palettes.yaml` (see ADR-0006 / ADR-0007). Slots without a hint
+// fall back to #888888. The LLM-driven texture-pull-from-Poly-Haven path is Phase 2+.
 import { AIMessage } from "@langchain/core/messages";
 import type { FoundryStateType, FoundryUpdate, MaterialPlan } from "../state";
-
-const SLOT_COLOR_HINTS: Record<string, string> = {
-  bark_white: "#e9e6df",
-  bark_dark: "#3a2f25",
-  leaf_green: "#4a8a4a",
-  leaf_gold: "#d8a64f",
-  stone_grey: "#8a8a8c",
-};
 
 export async function materialArtistNode(state: FoundryStateType): Promise<FoundryUpdate> {
   const prop = state.targetProp;
   if (!prop) throw new Error("MaterialArtist: state.targetProp is null");
+  if (!state.target) throw new Error("MaterialArtist: state.target is null");
+  const hints = state.target.palettes;
   const plans: MaterialPlan[] = prop.materials.map((slot) => ({
     slotName: slot,
-    hex: SLOT_COLOR_HINTS[slot] ?? "#888888",
+    hex: hints[slot] ?? "#888888",
     unlit: true,
   }));
   return {
