@@ -104,6 +104,14 @@ claude mcp add foundry pnpm foundry mcp                       # register stdio w
 pnpm test:mcp                                                 # smoke-test stdio
 pnpm test:mcp-http                                            # smoke-test HTTP+SSE
 
+# Phase 4 browser app (Frame MF remote at apps/web/):
+pnpm --filter @asset-foundry/web dev                          # vite dev server on :3035
+pnpm --filter @asset-foundry/web build                        # build the remote bundle
+# Combined dev (in two terminals):
+#   pnpm foundry mcp-http      (terminal 1, port 3036)
+#   pnpm --filter @asset-foundry/web dev   (terminal 2, port 3035)
+# Then open http://localhost:3035 standalone, or boot shell at :4000 for MF.
+
 BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm foundry asset:generate beaver_basic --target ../beaverGame
 ```
 
@@ -151,7 +159,9 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 
 - Phase 3.6: MCP resources — `foundry://manifest?target=...`, `foundry://run?id=...` (subscribable read-only views; deferred from Phase 3.5 — tools already cover the same data).
 - Phase 3.6: `foundry.manifest.add_prop`, `foundry.run.cancel`, `foundry.fixture.write` tools.
-- Phase 4: HTTP+SSE transport + Frame MF browser app under `apps/web/`.
+- Phase 4.5: full browser pages — Runs (subscribed to `notifications/progress` over SSE) and Generate (form + live progress bar). Phase 4 v1 ships only the Targets tab.
+- Phase 4.5: Redux Toolkit slices for `targets`, `runs`, `progress` (Phase 4 v1 uses local `useState`).
+- Phase 4.5: 3D glTF preview component for the Runs page; e2e harness (playwright).
 - Manual verification in Phase 2.5: actual mid-pipeline crash + `run:resume` recovery (Phase 2 verified persistence + dispatch but didn't simulate a real crash).
 - `foundry run:prune` retention policy — defer until DB grows unwieldy.
 - Bump `.blender-version` to 4.2 LTS once we're past Phase 0 (currently pinned to 4.0.2 to match local install).
