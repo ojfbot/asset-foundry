@@ -1,0 +1,8 @@
+- title: "M1 · Phase 0 close-out"
+  description: "Punch list complete, byte-identical reruns possible."
+- title: "M2 · Pipeline hardening"
+  description: "Visual regression, parser tests, MCP bridge, deterministic exports."
+- title: "M3 · Mode A asset coverage"
+  description: "Every Mode A prop generated, validated, in browser."
+- title: "M4 · Mode B prep"
+  description: "Affordances schema, wet-state variants, NPC asset categories."
