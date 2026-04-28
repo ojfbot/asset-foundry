@@ -5,7 +5,11 @@
 //   START → world_designer → asset_sculptor → material_artist → scene_assembler → validator → END
 //
 // Validator is deterministic TypeScript, not an LLM agent (ADR-0004).
+//
+// Optional checkpointer (ADR-0008): when provided, graph state is persisted at
+// every node transition so a killed run can resume via `foundry run:resume`.
 import { StateGraph, START, END } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { FoundryState } from "./state";
 import { worldDesignerNode, type WorldDesignerOptions } from "./nodes/world-designer";
 import { assetSculptorNode } from "./nodes/asset-sculptor";
@@ -13,7 +17,11 @@ import { materialArtistNode } from "./nodes/material-artist";
 import { sceneAssemblerNode } from "./nodes/scene-assembler";
 import { validatorNode } from "../validator";
 
-export function buildGraph(opts: WorldDesignerOptions) {
+export interface BuildGraphOptions extends WorldDesignerOptions {
+  checkpointer?: BaseCheckpointSaver;
+}
+
+export function buildGraph(opts: BuildGraphOptions) {
   const g = new StateGraph(FoundryState)
     .addNode("world_designer", worldDesignerNode(opts))
     .addNode("asset_sculptor", assetSculptorNode)
@@ -26,5 +34,5 @@ export function buildGraph(opts: WorldDesignerOptions) {
     .addEdge("material_artist", "scene_assembler")
     .addEdge("scene_assembler", "validator")
     .addEdge("validator", END);
-  return g.compile();
+  return opts.checkpointer ? g.compile({ checkpointer: opts.checkpointer }) : g.compile();
 }
