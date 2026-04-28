@@ -26,7 +26,8 @@ for (let i = 0; i < argv.length; i++) {
 }
 
 if (!propId) {
-  console.error("usage: pnpm gen-asset <prop_id> [--target <path>]   (e.g. birch_sapling)");
+  console.error("usage: pnpm gen-asset <prop_id> [--target <path>]");
+  console.error("       prop_id must match a prop entry in <target>/asset-foundry/world.yaml");
   process.exit(2);
 }
 

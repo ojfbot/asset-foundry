@@ -3,14 +3,16 @@ import { WorldManifestSchema } from "./schema";
 import { loadTarget } from "../src/targets/loader";
 
 describe("WorldManifestSchema", () => {
-  it("parses the committed beaverGame world.yaml (Phase 0 integration check)", () => {
-    // Target is resolved relative to process.cwd() (the asset-foundry repo root
-    // when vitest runs). beaverGame is the canonical sibling; once a second target
-    // ships in Phase 1, this test should iterate over all known targets.
-    const target = loadTarget("../beaverGame");
+  it("parses the committed test-fixtures target via loadTarget (integration check)", () => {
+    // Self-contained test target — checked into this repo so CI can validate the
+    // schema + loader without depending on any consumer game's checkout.
+    // foundry-agnostic-disable-next-line: test-fixtures/ is a contract artefact, not platform code
+    const target = loadTarget("./test-fixtures");
     const m = target.manifest;
     expect(m.version).toBe(1);
-    expect(m.props.find((p) => p.id === "birch_sapling")?.tri_budget).toBe(600);
+    expect(m.props).toHaveLength(1);
+    expect(m.props[0]!.tri_budget).toBe(12);
+    expect(target.palettes["debug_grey"]).toBe("#888888");
   });
 
   it("rejects a prop referencing an unknown biome", () => {

@@ -5,8 +5,8 @@
 // Resolution order:
 //   1. explicit `targetPath` argument
 //   2. $FOUNDRY_TARGET environment variable
-//   3. (Phase 0 only) fallback to ../beaverGame to keep `pnpm gen-asset beaver_basic`
-//      working during the migration. Drops in Phase 1.
+//   3. error — no implicit default. Phase 0's ../beaverGame fallback was dropped
+//      in Phase 1 once a second target (carrier-pigeon) proved the abstraction.
 //
 // Layout convention (per target):
 //   <target>/asset-foundry/world.yaml       ← Zod-validated manifest
@@ -40,11 +40,14 @@ export interface TargetContext {
   publicAssetsDir: string;
 }
 
-/** Phase 0 fallback. Drops in Phase 1 when a second target proves the abstraction. */
-const PHASE_0_FALLBACK = "../beaverGame";
-
 export function resolveTargetPath(explicit?: string): string {
-  const raw = explicit ?? process.env.FOUNDRY_TARGET ?? PHASE_0_FALLBACK;
+  const raw = explicit ?? process.env.FOUNDRY_TARGET;
+  if (!raw) {
+    throw new Error(
+      "no target specified. Pass --target <path> or set $FOUNDRY_TARGET to a repo " +
+        "containing an asset-foundry/ directory (per ADR-0006)."
+    );
+  }
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
