@@ -1,18 +1,21 @@
 // CLI: pnpm foundry <subcommand> [...args]
 //
-// Phase 2 / Phase 3 dispatcher. Each subcommand is a thin wrapper around a pure
-// handler in src/handlers.ts. The Phase 3 MCP server (src/mcp/server.ts) wraps
-// the same handlers as MCP tools — single code path, two front doors. (ADR-0009)
+// Phase 2/3/4 dispatcher. Each subcommand is a thin wrapper around a pure
+// handler in src/handlers.ts. The MCP server (src/mcp/server.ts) wraps the
+// same handlers as MCP tools — single code path, three front doors:
+//   pnpm foundry <verb>          → CLI
+//   pnpm foundry mcp             → stdio MCP server (ADR-0009)
+//   pnpm foundry mcp-http        → HTTP+SSE MCP server (ADR-0010)
 import { Command } from "commander";
 import * as h from "../src/handlers";
 import { createStateStore } from "../src/state/checkpointer";
-import { startMcpServer } from "../src/mcp/server";
+import { startMcpServer, startHttpMcpServer } from "../src/mcp/server";
 
 const program = new Command();
 program
   .name("foundry")
-  .description("Asset-foundry platform CLI (ADR-0006/0007/0008/0009).")
-  .version("0.3.0");
+  .description("Asset-foundry platform CLI (ADR-0006/0007/0008/0009/0010).")
+  .version("0.4.0");
 
 // ─── asset:generate ────────────────────────────────────────────────────────
 
@@ -216,9 +219,23 @@ program
 
 program
   .command("mcp")
-  .description("Start the asset-foundry MCP server over stdio (ADR-0009). Long-running.")
+  .description("Start the MCP server over stdio (ADR-0009). Long-running.")
   .action(async () => {
     await startMcpServer();
+  });
+
+// ─── mcp-http ──────────────────────────────────────────────────────────────
+
+program
+  .command("mcp-http")
+  .description("Start the MCP server over HTTP+SSE on 127.0.0.1 (ADR-0010). Long-running.")
+  .option("-p, --port <port>", "TCP port (default 3036 or $FOUNDRY_HTTP_PORT)")
+  .option("--host <host>", "bind host (default 127.0.0.1; do not change without an auth ADR)")
+  .action(async (opts: { port?: string; host?: string }) => {
+    await startHttpMcpServer({
+      port: opts.port ? parseInt(opts.port, 10) : undefined,
+      host: opts.host,
+    });
   });
 
 await program.parseAsync(process.argv);
