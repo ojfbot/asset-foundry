@@ -108,7 +108,7 @@ export async function startMcpServer(): Promise<void> {
     "foundry.asset.generate",
     {
       description:
-        "Generate one prop's asset end-to-end. Returns when the pipeline completes. A 'rejected' status (e.g. tri budget exceeded) is a normal outcome, not a tool error. Long-running (~1–2s for fixtures, longer for live LLM).",
+        "Generate one prop's asset end-to-end. Returns when the pipeline completes. A 'rejected' status (e.g. tri budget exceeded) is a normal outcome, not a tool error. Long-running (~1–2s for fixtures, longer for live LLM). Emits notifications/progress per node when the client supplies _meta.progressToken (Phase 3.5).",
       inputSchema: {
         propId: z.string().describe("Prop id from the target's manifest."),
         targetPath: z
@@ -117,10 +117,29 @@ export async function startMcpServer(): Promise<void> {
           .describe("Consumer game repo path. Defaults to $FOUNDRY_TARGET."),
       },
     },
-    async (args) =>
-      jsonContent(
-        await h.assetGenerate(store, { propId: args.propId, targetPath: args.targetPath }),
-      ),
+    async (args, extra) => {
+      const progressToken = extra._meta?.progressToken;
+      const onProgress = progressToken
+        ? async (event: h.ProgressEvent) => {
+            await extra.sendNotification({
+              method: "notifications/progress",
+              params: {
+                progressToken,
+                progress: event.progress,
+                total: event.total,
+                message: `${event.node} done (run ${event.runId})`,
+              },
+            });
+          }
+        : undefined;
+      return jsonContent(
+        await h.assetGenerate(
+          store,
+          { propId: args.propId, targetPath: args.targetPath },
+          { onProgress },
+        ),
+      );
+    },
   );
 
   // ─── run.list ─────────────────────────────────────────────────────────
@@ -161,13 +180,30 @@ export async function startMcpServer(): Promise<void> {
     "foundry.run.resume",
     {
       description:
-        "Re-invoke the LangGraph for a previously-started run from its latest checkpoint. Use after a crash or to retry a rejected run.",
+        "Re-invoke the LangGraph for a previously-started run from its latest checkpoint. Use after a crash or to retry a rejected run. Emits notifications/progress when the client supplies _meta.progressToken (Phase 3.5).",
       inputSchema: {
         runId: z.string().describe("UUID v4 of an existing run."),
       },
     },
-    async (args) =>
-      jsonContent(await h.assetGenerate(store, { resumeRunId: args.runId })),
+    async (args, extra) => {
+      const progressToken = extra._meta?.progressToken;
+      const onProgress = progressToken
+        ? async (event: h.ProgressEvent) => {
+            await extra.sendNotification({
+              method: "notifications/progress",
+              params: {
+                progressToken,
+                progress: event.progress,
+                total: event.total,
+                message: `${event.node} done (run ${event.runId})`,
+              },
+            });
+          }
+        : undefined;
+      return jsonContent(
+        await h.assetGenerate(store, { resumeRunId: args.runId }, { onProgress }),
+      );
+    },
   );
 
   // Clean shutdown.
