@@ -145,9 +145,8 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 
 ## Punch list
 
-- Phase 3.5: `notifications/progress` streaming for `foundry.asset.generate` and `run.resume` (graph `.stream()`-based instead of `.invoke()`).
-- Phase 3.5: MCP resources — `foundry://target/<path>/manifest`, `foundry://run/<id>/log`.
-- Phase 3.5: `foundry.manifest.add_prop`, `foundry.run.cancel`, `foundry.fixture.write` tools.
+- Phase 3.6: MCP resources — `foundry://manifest?target=...`, `foundry://run?id=...` (subscribable read-only views; deferred from Phase 3.5 — tools already cover the same data).
+- Phase 3.6: `foundry.manifest.add_prop`, `foundry.run.cancel`, `foundry.fixture.write` tools.
 - Phase 4: HTTP+SSE transport + Frame MF browser app under `apps/web/`.
 - Manual verification in Phase 2.5: actual mid-pipeline crash + `run:resume` recovery (Phase 2 verified persistence + dispatch but didn't simulate a real crash).
 - `foundry run:prune` retention policy — defer until DB grows unwieldy.
@@ -155,5 +154,4 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 - Wire the LLM path end-to-end: set `ANTHROPIC_API_KEY` and verify AssetSculptor produces a working bpy without the fixture.
 - Add MaterialArtist palette injection into the bpy script (currently a no-op planning step).
 - Visual regression: render 3 fixed angles per asset, commit baselines under `<target>/asset-foundry/dist/baselines/`, perceptual-diff in CI.
-- Tests for `parsing.ts` (FOUNDRY_SUMMARY edge cases) and `validator/index.ts` (rejection paths).
 - Strip `asset.extras.generator`/timestamp from glTF exports so byte-identical reruns become possible (geometry is already deterministic; only metadata drifts).
