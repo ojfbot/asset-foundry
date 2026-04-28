@@ -75,7 +75,8 @@ export async function assetSculptorNode(state: FoundryStateType): Promise<Foundr
   } else if (offline) {
     throw new Error(
       `AssetSculptor: ANTHROPIC_API_KEY unset and no fixture at ${fixturePath}. ` +
-        `Set the env var or add a fixture (see fixtures/birch_sapling.py for the contract).`
+        `Set the env var or add a fixture (see the §4.4 Python contract in CLAUDE.md and ` +
+        `existing fixtures in <target>/asset-foundry/fixtures/ for examples).`
     );
   } else {
     const text = await callClaude({ system: SYSTEM_PROMPT, user: userPromptFor(state) });

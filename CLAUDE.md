@@ -79,14 +79,15 @@ Paths below are target-rooted (`<target>/asset-foundry/...`).
 ```bash
 pnpm install
 pnpm install-blender                                         # checks Blender pin (ADR-0002)
-pnpm validate:manifest                                       # Zod-only manifest check (CI gate)
-pnpm validate:manifest --target ../beaverGame               # explicit target (Phase 0+)
-BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm gen-asset <prop_id>
-pnpm gen-asset <prop_id> --target ../beaverGame             # explicit target form
-pnpm validate                                                # schema + every <target>/asset-foundry/dist/*.validation.json
 pnpm typecheck
-pnpm test
+pnpm test                                                     # runs against test-fixtures/ target
+pnpm lint:agnostic                                            # ADR-0007 game-agnostic guard (CI gate)
+pnpm validate:manifest --target ../beaverGame                # Zod-only manifest check
+pnpm validate --target ../beaverGame                          # schema + every <target>/asset-foundry/dist/*.validation.json
+BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm gen-asset <prop_id> --target ../beaverGame
 ```
+
+`--target` is mandatory after Phase 1 (the Phase 0 default-to-`../beaverGame` shim was removed once a second target proved the abstraction). Set `$FOUNDRY_TARGET` to skip the flag.
 
 ## Environment
 
@@ -121,8 +122,7 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 
 ## Punch list
 
-- Phase 1: scaffold a second target (`../carrier-pigeon/asset-foundry/`) and finalize the AST-based agnostic-ness lint rule (ADR-0007).
-- Phase 1: drop the Phase 0 fallback to `../beaverGame` in `src/targets/loader.ts` once a second target proves the abstraction.
+- Phase 2: port `blogengine`'s SQLiteCheckpointer; add run IDs + `pnpm foundry`-style multi-command CLI (`commander`).
 - Bump `.blender-version` to 4.2 LTS once we're past Phase 0 (currently pinned to 4.0.2 to match local install).
 - Wire the LLM path end-to-end: set `ANTHROPIC_API_KEY` and verify AssetSculptor produces a working bpy without the fixture.
 - Add MaterialArtist palette injection into the bpy script (currently a no-op planning step).

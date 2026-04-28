@@ -24,15 +24,20 @@ jobs:
       - name: typecheck
         run: pnpm typecheck
 
-      - name: test
+      - name: foundry-agnostic lint (ADR-0007)
+        run: pnpm lint:agnostic
+
+      - name: test (schema + loader against test-fixtures/ target)
         run: pnpm test
 
-      - name: validate manifest schema
-        run: pnpm validate:manifest
+      - name: validate manifest schema (test-fixtures target)
+        run: pnpm validate:manifest --target ./test-fixtures
 
-      - name: gate committed validation manifests
-        run: pnpm validate
-
+  # Phase 1 leaves the per-target validation gate (`pnpm validate`) out of CI
+  # — it walks <target>/asset-foundry/dist/ which only exists on the consumer
+  # game's CI runner, not here. Each consumer is responsible for running
+  # `pnpm validate --target .` from its own asset-foundry checkout.
+  #
   # Phase 0 keeps Blender out of CI; the offline fixture path runs locally
   # via `pnpm gen-asset`. Phase 2 will add a blender-pipeline-smoke job that
   # installs the pinned Blender LTS and runs gen-asset on a representative
