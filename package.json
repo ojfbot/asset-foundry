@@ -14,13 +14,15 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:mcp": "tsx scripts/mcp-smoke-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
     "@langchain/anthropic": "^0.3.11",
     "@langchain/core": "^0.3.27",
     "@langchain/langgraph": "^0.2.31",
+    "@modelcontextprotocol/sdk": "^1",
     "better-sqlite3": "^11",
     "commander": "^12",
     "js-yaml": "^4.1.0",

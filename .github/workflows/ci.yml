@@ -33,6 +33,9 @@ jobs:
       - name: validate manifest schema (test-fixtures target)
         run: pnpm validate:manifest --target ./test-fixtures
 
+      - name: MCP server smoke test (ADR-0009)
+        run: pnpm test:mcp
+
   # Phase 1 leaves the per-target validation gate (`pnpm validate`) out of CI
   # — it walks <target>/asset-foundry/dist/ which only exists on the consumer
   # game's CI runner, not here. Each consumer is responsible for running

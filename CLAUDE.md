@@ -91,14 +91,23 @@ pnpm foundry asset:generate <prop_id> --target ../beaverGame  # generate
 pnpm foundry asset:list --target ../beaverGame                # list dist/ contents
 pnpm foundry target:list                                      # enumerate sibling targets
 pnpm foundry target:scaffold <name>                           # new <name>/asset-foundry/ from templates/
+pnpm foundry target:validate --target ../beaverGame           # Zod-validate manifest
+pnpm foundry manifest:read --target ../beaverGame             # parsed manifest as JSON
 pnpm foundry run:list [--target ...] [--status ...] [-l 20]   # recent runs from $FOUNDRY_STATE_DIR/runs.sqlite
 pnpm foundry run:status <run_id>                              # detail incl. last node from checkpoint
 pnpm foundry run:resume <run_id>                              # re-invoke from latest checkpoint
 
+# Phase 3 MCP server:
+pnpm foundry mcp                                              # stdio MCP server; long-running
+claude mcp add foundry pnpm foundry mcp                       # register with Claude Desktop / Code
+pnpm test:mcp                                                 # spawn server + smoke-test the tool registry
+
 BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm foundry asset:generate beaver_basic --target ../beaverGame
 ```
 
-`pnpm gen-asset` remains as a thin alias to `pnpm foundry asset:generate` (will be removed in Phase 3). `--target` is mandatory; set `$FOUNDRY_TARGET` to skip the flag.
+`pnpm gen-asset` remains as a thin alias to `pnpm foundry asset:generate` (will be removed in Phase 4). `--target` is mandatory; set `$FOUNDRY_TARGET` to skip the flag.
+
+The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts`): one code path, two front doors. Phase 4 will add an HTTP+SSE transport for the Frame MF browser app, sharing the same handlers.
 
 ## Environment
 
@@ -126,6 +135,7 @@ BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm foundry asse
 | [0006](decisions/adr/0006-target-workspace-model.md) | Target workspace model — asset-foundry owns no game data |
 | [0007](decisions/adr/0007-game-agnostic-contract.md) | Game-agnostic contract — `src/` carries no game tokens |
 | [0008](decisions/adr/0008-persistent-state-store.md) | Persistent state store — SQLite default, Postgres opt-in |
+| [0009](decisions/adr/0009-mcp-transport-stance.md) | MCP transport — stdio first, HTTP+SSE second, shared registry |
 
 Cross-cutting decisions (asset format, repo split, TS-everywhere) live in `../beaverGame/decisions/adr/`.
 
@@ -135,7 +145,10 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 
 ## Punch list
 
-- Phase 3: stdio MCP server (`@modelcontextprotocol/sdk`) wrapping the same handlers `pnpm foundry` calls — same code path, two front doors.
+- Phase 3.5: `notifications/progress` streaming for `foundry.asset.generate` and `run.resume` (graph `.stream()`-based instead of `.invoke()`).
+- Phase 3.5: MCP resources — `foundry://target/<path>/manifest`, `foundry://run/<id>/log`.
+- Phase 3.5: `foundry.manifest.add_prop`, `foundry.run.cancel`, `foundry.fixture.write` tools.
+- Phase 4: HTTP+SSE transport + Frame MF browser app under `apps/web/`.
 - Manual verification in Phase 2.5: actual mid-pipeline crash + `run:resume` recovery (Phase 2 verified persistence + dispatch but didn't simulate a real crash).
 - `foundry run:prune` retention policy — defer until DB grows unwieldy.
 - Bump `.blender-version` to 4.2 LTS once we're past Phase 0 (currently pinned to 4.0.2 to match local install).

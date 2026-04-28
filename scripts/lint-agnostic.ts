@@ -66,22 +66,23 @@ function tokenize(text: string): string[] {
 }
 
 function findTokenIn(text: string, kind: "identifier" | "string"): string[] {
+  // For single-word forbidden tokens (e.g. "pond", "beaver"), we match on
+  // word/snake-case boundaries to avoid false positives ("responds" must not
+  // match "pond"). For compound tokens (with underscores, e.g. "bark_white"),
+  // we substring-match because they don't tokenize cleanly.
   const hits = new Set<string>();
-  if (kind === "identifier") {
-    const parts = tokenize(text);
-    for (const t of FORBIDDEN_TOKENS) {
-      if (parts.includes(t)) hits.add(t);
-      // Also catch full snake-case forbidden tokens that span parts
-      if (t.includes("_") && text.toLowerCase().includes(t)) hits.add(t);
-    }
-  } else {
-    // string literal: substring match (game vocabulary in a prompt or config string
-    // is exactly what we want to forbid)
-    const lower = text.toLowerCase();
-    for (const t of FORBIDDEN_TOKENS) {
+  const lower = text.toLowerCase();
+  const parts = tokenize(text);
+  for (const t of FORBIDDEN_TOKENS) {
+    if (t.includes("_")) {
       if (lower.includes(t)) hits.add(t);
+    } else {
+      if (parts.includes(t)) hits.add(t);
     }
   }
+  // The kind argument is preserved so future tightenings can scope to one or
+  // the other (e.g. allow string-literal references when explicitly opted in).
+  void kind;
   return Array.from(hits);
 }
 
