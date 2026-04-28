@@ -5,6 +5,7 @@
   "type": "module",
   "description": "AI-driven Blender asset pipeline. World manifest → LangGraph orchestrator → Blender MCP → validated .glb. Reusable across game projects.",
   "scripts": {
+    "foundry": "tsx scripts/foundry.ts",
     "gen-asset": "tsx scripts/gen-asset.ts",
     "validate": "tsx scripts/validate.ts",
     "validate:manifest": "tsx scripts/validate-manifest.ts",
@@ -20,10 +21,13 @@
     "@langchain/anthropic": "^0.3.11",
     "@langchain/core": "^0.3.27",
     "@langchain/langgraph": "^0.2.31",
+    "better-sqlite3": "^11",
+    "commander": "^12",
     "js-yaml": "^4.1.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.7.0",
     "tsx": "^4.21.0",

@@ -1,0 +1,31 @@
+# __TARGET_NAME__ world manifest — scaffolded by `pnpm foundry target:scaffold`.
+# Edit this file to declare biomes, palette tokens, props, and characters.
+# Schema (Zod-validated): /Users/yuri/ojfbot/asset-foundry/manifest/schema.ts
+#
+# Quickstart:
+#   pnpm foundry asset:generate test_cube --target ../__TARGET_NAME__
+# This will use the trivial test_cube fixture below to prove the pipeline works,
+# then you can replace it with real props.
+
+version: 1
+
+biomes:
+  - id: starter_biome
+    palette: [neutral_grey]
+    fog: { color: "#cfcfcf", density: 0.005 }
+    ambient_props: []
+
+palettes:
+  neutral_grey: { hex: "#888888", role: neutral }
+
+props:
+  - id: test_cube
+    category: decoration
+    tri_budget: 50
+    variants: 1
+    biomes: [starter_biome]
+    style_anchors: [unit_cube, debug]
+    materials: [debug_grey]
+    interaction: none
+
+characters: []

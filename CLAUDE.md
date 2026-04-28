@@ -80,20 +80,32 @@ Paths below are target-rooted (`<target>/asset-foundry/...`).
 pnpm install
 pnpm install-blender                                         # checks Blender pin (ADR-0002)
 pnpm typecheck
-pnpm test                                                     # runs against test-fixtures/ target
+pnpm test                                                     # schema + state store + loader, against test-fixtures/
 pnpm lint:agnostic                                            # ADR-0007 game-agnostic guard (CI gate)
 pnpm validate:manifest --target ../beaverGame                # Zod-only manifest check
 pnpm validate --target ../beaverGame                          # schema + every <target>/asset-foundry/dist/*.validation.json
-BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm gen-asset <prop_id> --target ../beaverGame
+
+# Phase 2 unified CLI (commander-based):
+pnpm foundry --help                                           # subcommand list
+pnpm foundry asset:generate <prop_id> --target ../beaverGame  # generate
+pnpm foundry asset:list --target ../beaverGame                # list dist/ contents
+pnpm foundry target:list                                      # enumerate sibling targets
+pnpm foundry target:scaffold <name>                           # new <name>/asset-foundry/ from templates/
+pnpm foundry run:list [--target ...] [--status ...] [-l 20]   # recent runs from $FOUNDRY_STATE_DIR/runs.sqlite
+pnpm foundry run:status <run_id>                              # detail incl. last node from checkpoint
+pnpm foundry run:resume <run_id>                              # re-invoke from latest checkpoint
+
+BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm foundry asset:generate beaver_basic --target ../beaverGame
 ```
 
-`--target` is mandatory after Phase 1 (the Phase 0 default-to-`../beaverGame` shim was removed once a second target proved the abstraction). Set `$FOUNDRY_TARGET` to skip the flag.
+`pnpm gen-asset` remains as a thin alias to `pnpm foundry asset:generate` (will be removed in Phase 3). `--target` is mandatory; set `$FOUNDRY_TARGET` to skip the flag.
 
 ## Environment
 
 - `ANTHROPIC_API_KEY` — required for live LLM-driven sculpting. When unset, AssetSculptor uses `<target>/asset-foundry/fixtures/<prop_id>.py`. CI exercises the full pipeline this way.
 - `BLENDER_BIN` — override path. Default `blender`. macOS install: `/Applications/Blender.app/Contents/MacOS/Blender`.
-- `FOUNDRY_TARGET` — path to the consumer target repo (containing `asset-foundry/world.yaml`). Phase 0 falls back to `../beaverGame` when unset; Phase 1 makes this mandatory.
+- `FOUNDRY_TARGET` — path to the consumer target repo (containing `asset-foundry/world.yaml`). Mandatory after Phase 1; equivalent to `--target`.
+- `FOUNDRY_STATE_DIR` — path for the SQLite run-history DB (ADR-0008). Default: `~/.asset-foundry/state/`.
 
 ## Blender gotchas (learned the hard way)
 
@@ -113,6 +125,7 @@ BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender" pnpm gen-asset <p
 | [0005](decisions/adr/0005-langgraph-pattern-from-cv-builder.md) | Reuse cv-builder's LangGraph pattern |
 | [0006](decisions/adr/0006-target-workspace-model.md) | Target workspace model — asset-foundry owns no game data |
 | [0007](decisions/adr/0007-game-agnostic-contract.md) | Game-agnostic contract — `src/` carries no game tokens |
+| [0008](decisions/adr/0008-persistent-state-store.md) | Persistent state store — SQLite default, Postgres opt-in |
 
 Cross-cutting decisions (asset format, repo split, TS-everywhere) live in `../beaverGame/decisions/adr/`.
 
@@ -122,7 +135,9 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 
 ## Punch list
 
-- Phase 2: port `blogengine`'s SQLiteCheckpointer; add run IDs + `pnpm foundry`-style multi-command CLI (`commander`).
+- Phase 3: stdio MCP server (`@modelcontextprotocol/sdk`) wrapping the same handlers `pnpm foundry` calls — same code path, two front doors.
+- Manual verification in Phase 2.5: actual mid-pipeline crash + `run:resume` recovery (Phase 2 verified persistence + dispatch but didn't simulate a real crash).
+- `foundry run:prune` retention policy — defer until DB grows unwieldy.
 - Bump `.blender-version` to 4.2 LTS once we're past Phase 0 (currently pinned to 4.0.2 to match local install).
 - Wire the LLM path end-to-end: set `ANTHROPIC_API_KEY` and verify AssetSculptor produces a working bpy without the fixture.
 - Add MaterialArtist palette injection into the bpy script (currently a no-op planning step).
