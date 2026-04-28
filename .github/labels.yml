@@ -1,0 +1,62 @@
+# Source of truth for labels in this repo.
+# `scripts/seed-github.sh` reads this and creates them via `gh label create`.
+
+# Type — pick one
+- name: type:adr
+  color: "5319e7"
+- name: type:feat
+  color: "0e8a16"
+- name: type:fix
+  color: "d73a4a"
+- name: type:infra
+  color: "1d76db"
+- name: type:test
+  color: "fbca04"
+- name: type:docs
+  color: "0075ca"
+- name: type:spike
+  color: "c2e0c6"
+
+# Phase — pick one
+- name: phase:0
+  color: "ededed"
+  description: Foundation (mostly closed)
+- name: phase:1
+  color: "c5def5"
+  description: Pipeline hardening
+- name: phase:2
+  color: "bfd4f2"
+  description: Mode A asset coverage
+- name: phase:3
+  color: "b9c8e8"
+  description: Mode B prep
+
+# Area — multi-select
+- name: area:manifest
+  color: "fef2c0"
+- name: area:orchestrator
+  color: "fef2c0"
+- name: area:sculptor
+  color: "fef2c0"
+- name: area:material
+  color: "fef2c0"
+- name: area:scene
+  color: "fef2c0"
+- name: area:validator
+  color: "fef2c0"
+- name: area:blender-bridge
+  color: "fef2c0"
+- name: area:fixtures
+  color: "fef2c0"
+- name: area:ci
+  color: "fef2c0"
+- name: area:docs
+  color: "fef2c0"
+
+# Cross-cutting
+- name: blocks-cross-repo
+  color: "b60205"
+  description: Needs coordinated change in beaverGame
+- name: decision-pending
+  color: "fbca04"
+  description: Gated on a type:adr resolution
