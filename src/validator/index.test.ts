@@ -9,18 +9,18 @@ import type { ValidationOutcome } from "../orchestrator/state";
 // Minimal valid prop fixture for the gate tests. `category` and the rest
 // don't matter — the gate only inspects id and tri_budget.
 const prop: Prop = {
-  id: "birch_sapling",
+  id: "test_cube",
   category: "vegetation",
   tri_budget: 600,
   variants: 1,
-  biomes: ["pond_meadow"],
+  biomes: ["noop_biome"],
   style_anchors: ["test"],
   materials: [],
   interaction: "none",
 };
 
 const validSummary: SummaryShape = {
-  asset_id: "birch_sapling",
+  asset_id: "test_cube",
   tri_count: 80,
   bounding_box: { min: [0, 0, 0], max: [1, 1, 1] },
   material_slots: ["bark"],
@@ -61,7 +61,7 @@ describe("gateValidation", () => {
     const outcome = gateValidation(wrong, prop, "4.2.3");
     expect(outcome.status).toBe("rejected");
     expect(outcome.rejectionReason).toMatch(/wrong_id/);
-    expect(outcome.rejectionReason).toMatch(/birch_sapling/);
+    expect(outcome.rejectionReason).toMatch(/test_cube/);
   });
 
   it("rejects when tri_count is non-numeric (catches malformed bpy summaries)", () => {
@@ -109,7 +109,7 @@ describe("writeManifest", () => {
 
   it("writes a validated outcome next to the .glb path", () => {
     withTmp((dir) => {
-      const glb = join(dir, "birch_sapling_v1.glb");
+      const glb = join(dir, "test_cube_v1.glb");
       const outcome: ValidationOutcome = {
         status: "validated",
         triCount: 80,
@@ -118,10 +118,10 @@ describe("writeManifest", () => {
         materialSlots: ["bark"],
         blenderVersion: "4.2.3",
       };
-      const written = writeManifest(glb, "birch_sapling", outcome);
-      expect(written).toBe(join(dir, "birch_sapling_v1.validation.json"));
+      const written = writeManifest(glb, "test_cube", outcome);
+      expect(written).toBe(join(dir, "test_cube_v1.validation.json"));
       const parsed = JSON.parse(readFileSync(written, "utf8"));
-      expect(parsed.asset_id).toBe("birch_sapling");
+      expect(parsed.asset_id).toBe("test_cube");
       expect(parsed.status).toBe("validated");
       expect(parsed.tri_count).toBe(80);
       expect(parsed.material_slots).toEqual(["bark"]);
