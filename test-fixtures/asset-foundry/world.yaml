@@ -1,0 +1,30 @@
+# Minimal valid manifest used by schema.test.ts.
+# Asset-foundry owns no game data (ADR-0006), but it does need a *contract*
+# fixture for testing the loader and schema in CI without pulling in any
+# consumer game's repo.
+#
+# This represents the simplest possible valid target: one biome, one prop, one
+# palette token. It must stay minimal — extending it should require an ADR.
+
+version: 1
+
+biomes:
+  - id: noop_biome
+    palette: [neutral_grey]
+    fog: { color: "#cfcfcf", density: 0.0 }
+    ambient_props: []
+
+palettes:
+  neutral_grey: { hex: "#888888", role: neutral }
+
+props:
+  - id: cube_a
+    category: decoration
+    tri_budget: 12
+    variants: 1
+    biomes: [noop_biome]
+    style_anchors: [unit_cube]
+    materials: [debug_grey]
+    interaction: none
+
+characters: []

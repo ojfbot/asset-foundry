@@ -8,6 +8,7 @@
     "gen-asset": "tsx scripts/gen-asset.ts",
     "validate": "tsx scripts/validate.ts",
     "validate:manifest": "tsx scripts/validate-manifest.ts",
+    "lint:agnostic": "tsx scripts/lint-agnostic.ts",
     "install-blender": "bash scripts/install-blender-mcp.sh",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
