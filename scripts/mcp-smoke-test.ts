@@ -73,7 +73,9 @@ try {
   const targetListResult = parseJsonContent(
     (await client.callTool({
       name: "foundry.target.list",
-      arguments: {},
+      // Scan the repo itself so the test-fixtures/ target is always discoverable
+      // — CI runners don't have sibling target repos checked out.
+      arguments: { rootPath: "." },
     })) as ToolResult,
   ) as { rootPath: string; targets: Array<{ path: string; valid: boolean }> };
   const validTargets = targetListResult.targets.filter((t) => t.valid);
