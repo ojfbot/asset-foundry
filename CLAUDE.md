@@ -42,11 +42,11 @@ Code paths:
 - `manifest/world.yaml` — populated; 1 biome (`pond_meadow`), 5 props (birch_sapling, ground_pond_meadow, water_pond, sky_dome, beaver_basic).
 - `src/orchestrator/state.ts` — LangGraph `Annotation.Root` state. Pattern adapted from `cv-builder/packages/agent-graph/src/state/schema.ts:18–60` (see ADR-0005).
 - `src/orchestrator/graph.ts` — `buildGraph({propId})` returns a compiled graph. Edges: START → world_designer → asset_sculptor → material_artist → scene_assembler → validator → END.
-- `src/orchestrator/llm.ts` — Anthropic SDK client wrapper. **Prompt caching enabled by default** via `cache_control: ephemeral` on the system block. Model: `claude-sonnet-4-6`.
+- `src/orchestrator/llm.ts` — Anthropic SDK client wrapper. **Prompt caching enabled by default** via `cache_control: ephemeral` on the system block. Model: `claude-sonnet-4-20250514`.
 - `src/orchestrator/nodes/*.ts` — one file per sub-agent. The system prompts live as TS string literals; ADR-0004 calls these "first-class design artifacts".
 - `src/orchestrator/parsing.ts` — extracts the bpy script from a fenced LLM reply, and the `FOUNDRY_SUMMARY {...}` JSON line from Blender stdout.
 - `src/blender/mcp-bridge.ts` — Blender subprocess. Reads `.blender-version` and refuses on mismatch (ADR-0002). The MCP/TCP path is opt-in via `FOUNDRY_USE_MCP=1` (not yet implemented).
-- `src/validator/index.ts` — deterministic, NOT an agent. Parses the SceneAssembler's stdout, gates on `tri_budget`, writes the consumer-facing `<id>_v1.validation.json`.
+- `src/validator/index.ts` — deterministic, NOT an agent. Parses the SceneAssembler's stdout, gates on `tri_budget`, writes the consumer-facing `<id>_v1.validation.json`. Core gate logic extracted to a pure `gateValidation` function for direct unit testing.
 - `fixtures/_lib.py` — shared bpy helpers: deterministic seed, fresh scene, FLOAT_COLOR vertex colours with sRGB→linear conversion, `_activate_color` to promote the layer to active (without this the glTF exporter silently drops COLOR_0), `make_unlit_vertex_color_material` (Emission-only ⇒ KHR_materials_unlit on export).
 - `fixtures/<prop_id>.py` — one per prop; offline path used when `ANTHROPIC_API_KEY` is unset. The runtime contract on the bpy script is identical regardless.
 
@@ -91,7 +91,7 @@ pnpm test
 
 - **`bm.loops.layers.color.new()` creates a BYTE_COLOR attribute that the glTF exporter silently drops.** Use `bm.loops.layers.float_color.new()` (FLOAT_COLOR domain).
 - **`bm.to_mesh()` does not set `mesh.color_attributes.active_color`.** Without an active colour, the exporter writes no COLOR_0 even with `export_colors=True`. Always call `_activate_color(mesh, "Col")` after `to_mesh`.
-- **Vertex colours in glTF are linear by spec.** Author in sRGB and let `srgb_to_linear()` (in `_lib.py`) convert before assignment. Otherwise Three.js renders a 0.91 sRGB tone as ≈0.96 (washed white) under linear interpretation.
+- **Vertex colours in glTF are linear by spec.** Author in sRGB and let `srgb_to_linear()` (in `_lib.py`) convert before assignment. Otherwise the renderer shows a 0.91 sRGB tone as ≈0.96 (washed white) under linear interpretation.
 - **`__file__` in a fixture script run by Blender is the script path itself.** Fixtures import `_lib.py` via `sys.path.insert(0, os.path.dirname(__file__))`. Don't copy fixtures into other directories before running — keep them in `fixtures/` so the import works.
 
 ## Key ADRs (this repo)
@@ -116,5 +116,5 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 - Wire the LLM path end-to-end: set `ANTHROPIC_API_KEY` and verify AssetSculptor produces a working bpy without the fixture.
 - Add MaterialArtist palette injection into the bpy script (currently a no-op planning step).
 - Visual regression: render 3 fixed angles per asset, commit baselines under `dist/baselines/`, perceptual-diff in CI.
-- Tests for `parsing.ts` (FOUNDRY_SUMMARY edge cases) and `validator/index.ts` (rejection paths).
+- Tests for `validator/index.ts` rejection paths.
 - Strip `asset.extras.generator`/timestamp from glTF exports so byte-identical reruns become possible (geometry is already deterministic; only metadata drifts).
