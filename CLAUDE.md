@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-The AI-driven asset pipeline for the Cozy Beaver project (and any future stylized low-poly game). World manifest in YAML → LangGraph orchestrator with four narrow sub-agents → Blender (subprocess or MCP) → deterministic Validator → glTF binary. Outputs are consumed by the sibling repo [`beaverGame/`](../beaverGame).
+The AI-driven asset pipeline for the Cozy Beaver project (and any future stylized low-poly game). World manifest in YAML → LangGraph orchestrator with four narrow sub-agents → Blender (subprocess or MCP) → deterministic Validator → glTF binary. Outputs are consumed by the sibling repo [`beaverGame/`](../beaverGame). Also registered as a **Frame MF remote at :3035** and evolving toward a portable MCP platform (PR #16).
 
 **First read for new sessions:** `domain-knowledge/frame-os-context.md`, then `domain-knowledge/langgraph-patterns.md`, then this repo's `decisions/adr/`.
 
@@ -116,5 +116,4 @@ The full ojfbot skill tree is symlinked into `.claude/skills/`. Useful here: `/s
 - Wire the LLM path end-to-end: set `ANTHROPIC_API_KEY` and verify AssetSculptor produces a working bpy without the fixture.
 - Add MaterialArtist palette injection into the bpy script (currently a no-op planning step).
 - Visual regression: render 3 fixed angles per asset, commit baselines under `dist/baselines/`, perceptual-diff in CI.
-- Tests for `validator/index.ts` rejection paths.
 - Strip `asset.extras.generator`/timestamp from glTF exports so byte-identical reruns become possible (geometry is already deterministic; only metadata drifts).
