@@ -1,6 +1,6 @@
 # asset-foundry
 
-AI-driven asset pipeline for stylized low-poly Blender output. World manifest → LangGraph orchestrator (four narrow sub-agents) → Blender → deterministic Validator → glTF `.glb`. Built for the Cozy Beaver game in [`beaverGame`](../beaverGame), but generic by construction so future games can consume it.
+AI-driven asset pipeline for stylized low-poly Blender output. World manifest → LangGraph orchestrator (four narrow sub-agents) → Blender → deterministic Validator → glTF `.glb`. Built for the Cozy Beaver game in [`beaverGame`](../beaverGame), but generic by construction — asset-foundry also serves as a portable MCP platform (see PR #16) so future games and tools can consume it.
 
 ## Quickstart (5 commands)
 
@@ -20,9 +20,11 @@ When `ANTHROPIC_API_KEY` is set, AssetSculptor calls Claude to author the bpy sc
 
 ## Architecture
 
-LangGraph state machine, Anthropic SDK with prompt caching, Blender subprocess (TCP MCP path is opt-in via `FOUNDRY_USE_MCP=1`), Zod-validated YAML manifest. See [`CLAUDE.md`](CLAUDE.md) for the directory map and [`decisions/adr/`](decisions/adr/) for the architectural decisions.
+LangGraph state machine, Anthropic SDK with prompt caching, Blender subprocess (TCP MCP path is opt-in via `FOUNDRY_USE_MCP=1`), Zod-validated YAML manifest. Registered as a Frame Module Federation remote at `:3035`. See [`CLAUDE.md`](CLAUDE.md) for the directory map and [`decisions/adr/`](decisions/adr/) for the architectural decisions.
 
-## Phase 0 status
+## Phase 0 status — CLOSED
+
+Phase 0 reached test-covered vertical-slice status and is fully closed.
 
 - [x] World manifest + Zod schema + tests
 - [x] Five-node graph wired and exercised end-to-end
