@@ -30,6 +30,20 @@ jobs:
 
       - name: Run skill audit
         run: |
+          # The audit hook ships in core/scripts/hooks/ and is symlinked into
+          # consumer repos by install-agents.sh. Symlinks are gitignored on
+          # consumer repos, so they're not in fresh CI checkouts. If the hook
+          # isn't here, this isn't core — skip with a notice instead of failing.
+          if [[ ! -x ./scripts/hooks/pr-skill-audit.sh ]]; then
+            echo "::notice::pr-skill-audit.sh not present in this repo (consumer-side install)"
+            echo "::notice::Skipping skill audit. The hook lives in ojfbot/core; symlinked into consumers via install-agents.sh."
+            mkdir -p /tmp
+            cat > /tmp/skill-audit-report.md <<'EOF'
+          _Skill audit skipped: this repo does not ship `scripts/hooks/pr-skill-audit.sh` directly. The hook lives in `ojfbot/core` and is symlinked into consumer repos by `install-agents.sh`. The symlink is gitignored, so it isn't present on a CI runner that only checks out this repo._
+          EOF
+            exit 0
+          fi
+
           if [[ "${{ steps.telemetry.outputs.available }}" == "true" ]]; then
             MODE="both"
           else
