@@ -40,7 +40,7 @@ Code paths (platform side):
 - `src/targets/loader.ts` — `loadTarget(targetPath?)` returns a `TargetContext` ({manifest, fixturesDir, outputDir, scriptsDir, palettes, publicAssetsDir}). Resolution: explicit arg → `$FOUNDRY_TARGET` → `../beaverGame` (Phase 0 fallback only).
 - `src/orchestrator/state.ts` — LangGraph `Annotation.Root` state, including `target: TargetContext | null`. Pattern adapted from `cv-builder/packages/agent-graph/src/state/schema.ts` (ADR-0005).
 - `src/orchestrator/graph.ts` — `buildGraph({propId})` returns a compiled graph. Edges: START → world_designer → asset_sculptor → material_artist → scene_assembler → validator → END.
-- `src/orchestrator/llm.ts` — Anthropic SDK client wrapper. **Prompt caching enabled by default** via `cache_control: ephemeral` on the system block. Model: `claude-sonnet-4-6`.
+- `src/orchestrator/llm.ts` — Anthropic SDK client wrapper. **Prompt caching enabled by default** via `cache_control: ephemeral` on the system block. Model: `claude-sonnet-4-20250514`.
 - `src/orchestrator/nodes/*.ts` — one file per sub-agent. The system prompts live as TS string literals; ADR-0004 calls these "first-class design artifacts".
 - `src/orchestrator/parsing.ts` — extracts the bpy script from a fenced LLM reply, and the `FOUNDRY_SUMMARY {...}` JSON line from Blender stdout.
 - `src/blender/blender-runner.ts` — Blender subprocess. Reads `.blender-version` and refuses on mismatch (ADR-0002). Writes `_materials.json` into the target's scriptsDir. The MCP service surface lives at the orchestrator layer (ADR-0009 — Phase 3 work); this file is *not* an MCP bridge.
@@ -131,7 +131,7 @@ The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts
 
 - **`bm.loops.layers.color.new()` creates a BYTE_COLOR attribute that the glTF exporter silently drops.** Use `bm.loops.layers.float_color.new()` (FLOAT_COLOR domain).
 - **`bm.to_mesh()` does not set `mesh.color_attributes.active_color`.** Without an active colour, the exporter writes no COLOR_0 even with `export_colors=True`. Always call `_activate_color(mesh, "Col")` after `to_mesh`.
-- **Vertex colours in glTF are linear by spec.** Author in sRGB and let `srgb_to_linear()` (in `_lib.py`) convert before assignment. Otherwise Three.js renders a 0.91 sRGB tone as ≈0.96 (washed white) under linear interpretation.
+- **Vertex colours in glTF are linear by spec.** Author in sRGB and let `srgb_to_linear()` (in `_lib.py`) convert before assignment. Otherwise the renderer shows a 0.91 sRGB tone as ≈0.96 (washed white) under linear interpretation.
 - **`__file__` in a fixture script run by Blender is the script path itself.** Fixtures import `_lib.py` via `sys.path.insert(0, os.path.dirname(__file__))`. Don't copy fixtures into other directories before running — keep them in `fixtures/` so the import works.
 
 ## Key ADRs (this repo)
