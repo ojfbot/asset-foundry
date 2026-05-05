@@ -1,6 +1,6 @@
 # asset-foundry
 
-AI-driven asset pipeline for stylized low-poly Blender output. World manifest → LangGraph orchestrator (four narrow sub-agents) → Blender → deterministic Validator → glTF `.glb`. Built for the Cozy Beaver game in [`beaverGame`](../beaverGame), but generic by construction — asset-foundry also serves as a portable MCP platform (see PR #16) so future games and tools can consume it.
+AI-driven asset pipeline for stylized low-poly Blender output. World manifest → LangGraph orchestrator (four narrow sub-agents) → Blender → deterministic Validator → glTF `.glb`. Built for the Cozy Beaver game in [`beaverGame`](../beaverGame), but generic by construction — asset-foundry also serves as a portable MCP platform so future games and tools can consume it.
 
 ## Quickstart (5 commands)
 
@@ -19,8 +19,7 @@ The fourth command runs the full pipeline: WorldDesigner → AssetSculptor → M
 When `ANTHROPIC_API_KEY` is set, AssetSculptor calls Claude to author the bpy script. When unset, it falls back to a hand-scripted fixture under `fixtures/<prop_id>.py`. The runtime contract on the bpy script is identical either way; the §4.4 Python contract (deterministic seed, fresh scene, named root, glTF export, JSON summary line) is enforced by the Validator regardless.
 
 ## Architecture
-
-LangGraph state machine, Anthropic SDK with prompt caching, Blender subprocess (TCP MCP path is opt-in via `FOUNDRY_USE_MCP=1`), Zod-validated YAML manifest. Registered as a Frame Module Federation remote at `:3035`. See [`CLAUDE.md`](CLAUDE.md) for the directory map and [`decisions/adr/`](decisions/adr/) for the architectural decisions.
+LangGraph state machine, Anthropic SDK with prompt caching, dual Blender transports — subprocess + kernel-MCP — behind a stable contract (ADR-0011), Zod-validated YAML manifest. Registered as a Frame Module Federation remote at `:3037`. See [`CLAUDE.md`](CLAUDE.md) for the directory map and [`decisions/adr/`](decisions/adr/) for the architectural decisions.
 
 ## Phase 0 status — CLOSED
 
@@ -32,7 +31,7 @@ Phase 0 reached test-covered vertical-slice status and is fully closed.
 - [x] Validator writes consumable `.validation.json`
 - [x] Auto-sync into `../beaverGame/public/assets/`
 - [ ] Live LLM path (set `ANTHROPIC_API_KEY` and validate)
-- [ ] MCP TCP bridge (`FOUNDRY_USE_MCP=1`)
+- [x] MCP transports — stdio server (ADR-0009), HTTP+SSE (ADR-0010), dual Blender transports (ADR-0011)
 - [ ] Visual regression baselines under `dist/baselines/`
 
 ## License
