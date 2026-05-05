@@ -126,6 +126,8 @@ The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts
 - `FOUNDRY_TARGET` — path to the consumer target repo (containing `asset-foundry/world.yaml`). Mandatory after Phase 1; equivalent to `--target`.
 - `FOUNDRY_STATE_DIR` — path for the SQLite run-history DB (ADR-0008). Default: `~/.asset-foundry/state/`.
 - `FOUNDRY_HTTP_PORT` — TCP port for `foundry mcp-http` (ADR-0010). Default: 3036.
+- `FOUNDRY_BLENDER_TRANSPORT` — `subprocess` (default, headless) or `kernel` (ADR-0011). Kernel mode routes bpy through the ahujasid blender-mcp running inside an open Blender. Both paths peer; CI uses subprocess.
+- `FOUNDRY_BLENDER_KERNEL_CMD` / `FOUNDRY_BLENDER_KERNEL_ARGS` — override the kernel invocation. Defaults: `uvx` and `blender-mcp` (so the kernel transport runs `uvx blender-mcp`).
 
 ## Blender gotchas (learned the hard way)
 
@@ -148,6 +150,7 @@ The CLI subcommands and the MCP tools share one handler module (`src/handlers.ts
 | [0008](decisions/adr/0008-persistent-state-store.md) | Persistent state store — SQLite default, Postgres opt-in |
 | [0009](decisions/adr/0009-mcp-transport-stance.md) | MCP transport — stdio first, HTTP+SSE second, shared registry |
 | [0010](decisions/adr/0010-ui-host-integration.md) | UI host integration — Frame MF + HTTP+SSE; ports 3035/3036 |
+| [0011](decisions/adr/0011-layered-blender-access.md) | Layered Blender access — kernel MCP + foundry domain (peer transports) |
 
 Cross-cutting decisions (asset format, repo split, TS-everywhere) live in `../beaverGame/decisions/adr/`.
 
